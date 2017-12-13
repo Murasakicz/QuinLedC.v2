@@ -1,0 +1,148 @@
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<a href="admin.html" class="btn btn--s">&lt;</a>&nbsp;&nbsp;<strong>MQTT Configuration</strong>
+<hr>
+	Connect to MQTT with these settings:<br>
+<form action="" method="get">
+    <table border="0" cellspacing="0" cellpadding="3" style="width:350px">
+        <tr>
+            <td align="right">IP:     </td>
+            <td>
+                <input type="text" id="ip_0" name="ip_0" size="3">.<input type="text" id="ip_1" name="ip_1" size="3">.<input type="text" id="ip_2" name="ip_2" size="3">.<input type="text" id="ip_3" name="ip_3" value="" size="3">
+            </td>
+        </tr>
+		<tr>
+            <td align="right">Port:</td>
+            <td>
+                <input type="port" id="port" name="port" value="">
+            </td>
+        </tr>
+        <tr>
+            <td align="right">User:</td>
+            <td>
+                <input type="user" id="user" name="user" value="">
+            </td>
+        </tr>
+        <tr>
+            <td align="right">Password:</td>
+            <td>
+                <input type="password" id="password" name="password" value="">
+            </td>
+        </tr>
+	</table>
+	
+	<fieldset>
+		<legend>TSL/SSL:</legend>	
+		<table border="0" cellspacing="0" cellpadding="3" style="width:350px">
+			<tr>
+				<td align="right">TSL:</td>
+				<td>
+					<input type="checkbox" id="tsl" name="tsl">
+				</td>
+			</tr>
+			<tr>
+				<td align="right">Fingerprint:</td>
+				<td>
+					<input type="fingerprint" id="fingerprint" name="fingerprint" value="">
+				</td>
+			</tr>
+		</table>
+	</fieldset>
+		
+	<fieldset>
+		<legend>Channels:</legend>	
+		<table border="0" cellspacing="0" cellpadding="3" style="width:350px">				
+			<tr>
+				<td align="right">Channel1 id:</td>
+				<td>
+					<input type="ch1_id" id="ch1_id" name="ch1_id" value="">
+				</td>
+			</tr>			
+			<tr>
+				<td align="right">Channel2 id:</td>
+				<td>
+					<input type="ch2_id" id="ch2_id" name="ch2_id" value="">
+				</td>
+			</tr>
+			<tr>
+				<td align="right">Channel Switch sub-id:</td>
+				<td>
+					<input type="ch_switch_subid" id="ch_switch_subid" name="ch_switch_subid" value="">
+				</td>
+			</tr>
+			<tr>
+				<td align="right">Channel status sub-id:</td>
+				<td>
+					<input type="ch_status_subid" id="ch_status_subid" name="ch_status_subid" value="">
+				</td>
+			</tr>
+			<tr>
+				<td align="right">Channel brightnes sub-id:</td>
+				<td>
+					<input type="ch_brightnes_subid" id="ch_brightnes_subid" name="ch_brightnes_subid" value="">
+				</td>
+			</tr>
+			<tr>
+				<td align="right">Channel brightnes status sub-id:</td>
+				<td>
+					<input type="ch_status_brightnes_subid" id="ch_status_brightnes_subid" name="ch_status_brightnes_subid" value="">
+				</td>
+			</tr>		
+	
+			
+		</table>	
+	</fieldset>
+		
+		
+	<table border="0" cellspacing="0" cellpadding="3" style="width:350px">		
+        <tr>
+            <td colspan="2" align="center">
+                <input type="submit" style="width:150px" class="btn btn--m btn--blue" value="Save">
+            </td>
+        </tr>	
+    </table>
+	
+</form>
+<hr>
+<strong>Connection State:</strong>
+<div id="connectionstate">N/A</div>
+<br>
+<a href="javascript:GetState();" style="width:150px" class="btn btn--m btn--blue">Refresh</a>
+
+<script language="javascript" type="text/javascript">
+ 
+    function GetState() {
+        setValues("/admin/mqttconnectionstate");
+    }
+
+    window.onload = function () {
+        load("style.css", "css", function () {
+            load("microajax.js", "js", function () {
+                setValues("/admin/mqttvalues");
+                setTimeout(GetState, 3000);
+            });
+        });
+    }
+
+    function load(e, t, n) {
+        if ("js" == t) {
+            var a = document.createElement("script");
+            a.src = e,
+            a.type = "text/javascript",
+            a.async = !1,
+            a.onload = function () { n() },
+            document.getElementsByTagName("head")[0].appendChild(a)
+        } else if ("css" == t) {
+            var a = document.createElement("link");
+            a.href = e,
+            a.rel = "stylesheet",
+            a.type = "text/css",
+            a.async = !1,
+            a.onload = function () { n() },
+            document.getElementsByTagName("head")[0].appendChild(a)
+        }
+    }
+</script>
+
+
+
