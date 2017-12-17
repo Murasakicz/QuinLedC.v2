@@ -74,7 +74,7 @@ void callback(char* topic, uint8_t* payload, unsigned int length) {
 
     if (topicSwitch) {
       if (valueInt) {
-        if (led1Value > 0){
+        if (led1SetValue > 0){
           //logInfo("Switch already on LED1");
         }else{
           led1SetValue = 1023;
@@ -98,7 +98,7 @@ void callback(char* topic, uint8_t* payload, unsigned int length) {
     }
     if (topicSwitch) {
       if (valueInt) {
-        if (led2Value > 0){
+        if (led2SetValue > 0){
           //logInfo("Switch already on LED2");
         }else{
           led2SetValue = 1023;
