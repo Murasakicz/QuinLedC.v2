@@ -19,14 +19,18 @@ MQTT MQTTServer;
 #define PIN_LED1 0 // Pin with 0
 #define PIN_LED2 2 // Pin with 1
 
+const int BUFFER_SIZE = JSON_OBJECT_SIZE(10);
+#define MQTT_MAX_PACKET_SIZE 512
+
 int led1Value = 0, led2Value = 0;
 int led1SetValue = 0, led2SetValue = 0;
-uint32_t ledFadeTime = 0;
+uint32_t ledFadeTime = 0; uint32_t transition = 0;
+int chanel = 0;
 
 
 void ledFade() {
   if (millis() - ledFadeTime < 4ul) return;
-  ledFadeTime = millis();
+  ledFadeTime = millis()+( transition*1000);
 
   if (led1Value < led1SetValue) {
     led1Value++;
@@ -41,78 +45,117 @@ void ledFade() {
   if (led2Value > led2SetValue) {
     led2Value--;
   }
-
+  //Serial.println("Tick");
   analogWrite(PIN_LED1, led1Value);
   analogWrite(PIN_LED2, led2Value);
 }
 
+//***************** aurduinoJson extension 
+bool containsNestedKey(const JsonObject& obj, const char* key) {
+    for (const JsonPair& pair : obj) {
+        if (!strcmp(pair.key, key))
+            return true;
+
+        if (containsNestedKey(pair.value.as<JsonObject>(), key)) 
+            return true;
+    }
+
+    return false;
+}
+
+bool processJson(char* message) {
+  StaticJsonBuffer<BUFFER_SIZE> jsonBuffer;
+
+  JsonObject& root = jsonBuffer.parseObject(message);
+
+  if (!root.success()) {
+    Serial.println("parseObject() failed");
+    return false;
+  }
+
+  if (chanel == 1){
+    if (root.containsKey("state")){
+      if(strcmp(root["state"], "ON") == 0){
+        led1SetValue = 1023;
+      }else if (strcmp(root["state"], "OFF") == 0) {
+        led1SetValue = 0;
+      }  
+    }
+    if (root.containsKey("brightness")) {
+       led1SetValue = root["brightness"];
+    }  
+  }
+  if (chanel == 2){
+    if (root.containsKey("state")){
+      if(strcmp(root["state"], "ON") == 0){
+        led2SetValue = 1023;
+      }else if (strcmp(root["state"], "OFF") == 0) {
+        led2SetValue = 0;
+      }  
+    }
+    if (root.containsKey("brightness")) {
+       led2SetValue = root["brightness"];
+    }  
+  }
+  if (root.containsKey("transitions")){
+    transition = root["transitions"];  
+  }
+  return true;
+}
+
 void callback(char* topic, uint8_t* payload, unsigned int length) {
-  //logValue("Message arrived to topic: ", topic);
-  
-  Serial.println("Message arrived to topic");
-  if (length > 4) {
-    //logInfo("Message too long, ignored");
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+
+  if (strstr(topic,MQTTServer.constructChanelString(1,IN).c_str()) != NULL){
+    chanel = 1;
+  }
+  if (strstr(topic,MQTTServer.constructChanelString(2,IN).c_str()) != NULL){
+    chanel = 2;
+  }
+
+  char message[length + 1];
+  for (int i = 0; i < length; i++) {
+    message[i] = (char)payload[i];
+  }
+  message[length] = '\0';
+  Serial.println(message);
+
+  if (!processJson(message)) {
     return;
   }
+  sendState();  
+}
 
-  char valueRaw[5] = {0, 0, 0, 0, 0};
-  strncpy(valueRaw, (char*)payload, length);
-  int valueInt = String(valueRaw).toInt();
+void sendState() {
+  StaticJsonBuffer<BUFFER_SIZE> jsonBuffer;
 
-  
+  JsonObject& root = jsonBuffer.createObject();
 
-  bool topicLed1 = strstr(topic,MQTTServer._config.channel1Id.c_str()) != NULL;
-  bool topicLed2 = strstr(topic,MQTTServer._config.channel1Id.c_str()) != NULL;
-  bool topicSwitch = strstr(topic,MQTTServer._config.channelSwitchSubId.c_str()) != NULL;
-  bool topicValue = strstr(topic,MQTTServer._config.channelBrightnesSubId.c_str()) != NULL;
-
-  if (topicLed1) {
-    if (topicValue) {
-      //logValue("Setting value to LED1: ", valueInt);
-      led1SetValue = valueInt;
-    }
-
-    if (topicSwitch) {
-      if (valueInt) {
-        if (led1SetValue > 0){
-          //logInfo("Switch already on LED1");
-        }else{
-          led1SetValue = 1023;
-          //logInfo("Switch on LED1");
-        }
-      } else {
-        led1SetValue = 0;
-        //logInfo("Switch off LED1");
-      }
-    }
-
-    MQTTServer.publish(MQTTServer.constructChanelString(1, Status).c_str(), led1SetValue ? "1" : "0");
-    MQTTServer.publish(MQTTServer.constructChanelString(1, StatusBrightnes).c_str(), String(led1SetValue).c_str());
+  if (chanel == 1){
+    if (led1SetValue > 0 ){
+      root["state"] = "ON";  
+    }else{
+      root["state"] = "OFF";
+    }  
+    root["brightness"] = led1SetValue;
   }
 
-
-  if (topicLed2) {
-    if (topicValue) {
-      //logValue("Setting value to LED2: ", valueInt);
-      led2SetValue = valueInt;
-    }
-    if (topicSwitch) {
-      if (valueInt) {
-        if (led2SetValue > 0){
-          //logInfo("Switch already on LED2");
-        }else{
-          led2SetValue = 1023;
-          //logInfo("Switch on LED2");
-        }
-      } else {
-        led2SetValue = 0;
-        //logInfo("Switch off LED2");
-      }
-    }
-    MQTTServer.publish(MQTTServer.constructChanelString(2, Status).c_str(), led2SetValue ? "1" : "0");
-    MQTTServer.publish(MQTTServer.constructChanelString(2, StatusBrightnes).c_str(), String(led2SetValue).c_str());
+  if (chanel == 2){
+    if (led2SetValue > 0 ){
+      root["state"] = "ON";  
+    }else{
+      root["state"] = "OFF";
+    }  
+    root["brightness"] = led2SetValue;
   }
-  //logInfo("Message processing finished");
+  root["transitions"] = transition;
+
+  char buffer[root.measureLength() + 1];
+  root.printTo(buffer, sizeof(buffer));
+
+   MQTTServer.publish(MQTTServer.constructChanelString(chanel,OUT).c_str(), buffer, true);
 }
 
 void setup() {
@@ -130,16 +173,20 @@ void setup() {
     MQTTServer.setMQTTCallback(callback);
     MQTTServer.begin(&SPIFFS, ESPHTTPServer.getDeviceName());
 
-    MQTTServer.addSubscription(MQTTServer.constructChanelString(1, Brightnes).c_str());
-    MQTTServer.addSubscription(MQTTServer.constructChanelString(2, Brightnes).c_str());
-    MQTTServer.addSubscription(MQTTServer.constructChanelString(1, Switch).c_str());
-    MQTTServer.addSubscription(MQTTServer.constructChanelString(2, Switch).c_str());
+    MQTTServer.addSubscription(MQTTServer.constructChanelString(1,IN).c_str());
+    MQTTServer.addSubscription(MQTTServer.constructChanelString(2,IN).c_str());
+    
+    chanel = 1;
+    sendState();
+    chanel = 2;
+    sendState();
 }
 
 void loop() {
     /* add main program code here */
     MQTTServer.loop();  //run the loop() method as often as possible - this keeps the MQTT services running
     //server.handleClient();
+    ESPHTTPServer.mqttConnectionStatus = MQTTServer.state();
     ledFade();
     
     // DO NOT REMOVE. Attend OTA update from Arduino IDE

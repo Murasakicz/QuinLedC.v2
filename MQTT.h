@@ -23,12 +23,12 @@
 #define MQTT_CONFIG_FILE "/mqttconfig.json"
 //Maximum number of subscriptions that can be auto-subscribed
 //feel free to change this if you need more subsciptions
-#define MAX_SUBSCRIPTIONS 25  
+#define MAX_SUBSCRIPTIONS 10  
 
 #define DEFAULT_QOS 1;  //at least once - devices are guarantee to get a message.
 
 enum ConectionType { Dummy , Unsecured, SecureUser, SecureTsl, SecureTslAndUser };
-enum SubChanelType { Switch , Status, Brightnes, StatusBrightnes};
+enum SubChanelType { IN , OUT, BACKGROUND};
 
 typedef struct {
     IPAddress  ip;
@@ -38,17 +38,15 @@ typedef struct {
     bool tsl;
     String firgerprint;
     
-    String channel1Id;
-    String channel2Id;
-    String channelSwitchSubId;
-    String channelStatusSubId;
-    String channelBrightnesSubId;
-    String channelStatusBrightnesSubId;
+    String channel1IN;
+    String channel1OUT;
+    String channel2IN;
+    String channel2OUT;
 } strMQTTConfig;
 
 struct subscription{
   bool isUsed = false;
-  const char* topic;
+  char* topic;
 };
 typedef struct subscription subscription;
 
@@ -60,7 +58,7 @@ class MQTT
     int loop();
     void end();
     int state();
-    String constructChanelString(int channel, SubChanelType sub);
+    String constructChanelString(int channel,SubChanelType sub);
     strMQTTConfig _config;
     
     
@@ -106,8 +104,7 @@ class MQTT
     void resubscribe();
     bool removeSubscription(const char* topic);
     bool unsubscribe(const char* topic);
-    void reconnect();
-
+    void reconnect();    
     
     //bool connect_normal();
     //bool connect_secure();

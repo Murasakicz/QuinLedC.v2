@@ -51,7 +51,7 @@ bool MQTT::connect(){
     client = PubSubClient(_config.ip, _config.port, wifiClient);
     client.connect(_deviceName.c_str());
     if (client.connected()) {
-      //Serial.println("MQTT Unsecured connected");
+      Serial.println("MQTT Unsecured connected");
       return true;
       }
     return false;
@@ -61,7 +61,7 @@ bool MQTT::connect(){
     client = PubSubClient(_config.ip, _config.port, wifiClient);
     client.connect(_deviceName.c_str(),_config.user.c_str(),_config.password.c_str());
     if (client.connected()) {
-      //Serial.println("MQTT SecureUser connected");
+      Serial.println("MQTT SecureUser connected");
       return true;
       }
     return false;
@@ -71,7 +71,7 @@ bool MQTT::connect(){
     client = PubSubClient(_config.ip, _config.port, wifiClientSecure);
     client.connect(_deviceName.c_str());
     if (client.connected()) {
-      //Serial.println("MQTT SecureTsl connected");
+      Serial.println("MQTT SecureTsl connected");
       return true;
       }
     return false;
@@ -82,7 +82,7 @@ bool MQTT::connect(){
     client = PubSubClient(_config.ip, _config.port, wifiClientSecure);
     client.connect(_deviceName.c_str(),_config.user.c_str(),_config.password.c_str());
     if (client.connected()) {
-      //Serial.println("MQTT SecureTslAndUser connected");
+      Serial.println("MQTT SecureTslAndUser connected");
       return true;
       }
     return false;
@@ -102,6 +102,7 @@ bool MQTT::subscribe(const char* topic, int qos){
     bool returnVal = client.subscribe(topic, qos);
 
     //loop mqtt client
+    Serial.println(topic);
     client.loop();
     return returnVal;
   }
@@ -119,7 +120,10 @@ bool MQTT::addSubscription(const char* topic){
   //loop throough finding the next available slot for a subscription and add it
   for(int i = 0; i < MAX_SUBSCRIPTIONS; i++){
     if(_subscriptions[i].isUsed == false){
-      _subscriptions[i].topic = topic;
+      int length = strlen(topic);
+      _subscriptions[i].topic = new char[length +1]();
+      strncpy(_subscriptions[i].topic, topic, length); 
+      
       _subscriptions[i].isUsed = true;
       subscribed = true;
       break;
@@ -133,13 +137,13 @@ bool MQTT::addSubscription(const char* topic){
 }
 
 //loops through list of subscriptions and attempts to subscribe to all topics
-void MQTT::resubscribe(){    
-  //Serial.println("resubscribe to:");
+void MQTT::resubscribe(){ 
+  Serial.println("resubscribe to:");
   for(int i = 0; i < MAX_SUBSCRIPTIONS; i++){
     if(_subscriptions[i].isUsed){
-      //Serial.println(_subscriptions[i].topic);
+      
+      Serial.println(_subscriptions[i].topic);
       subscribe(_subscriptions[i].topic, _qos);
-      yield();
     }
   }
 }
@@ -219,7 +223,7 @@ int MQTT::loop(){
     //check for good connections and attempt a reconnect if needed
 
     if (!client.connected() && _config.ip[0] != 0) {
-      //Serial.println("MQTT down... reconecting");
+      Serial.println("MQTT down... reconecting");
       reconnect();
     }
     
@@ -243,9 +247,9 @@ void MQTT::reconnect() {
       //attempt to connect to mqtt when we finally get connected to WiFi
       if(_config.ip[0] != 0){
 
-      static int timeout = 0; //allow a max of 5 mqtt connection attempts before timing out
+      static int timeout = 2; //allow a max of 5 mqtt connection attempts before timing out
       if (!client.connected() && timeout < 5) {
-        //debugPrint("Attemping MQTT connection");
+        Serial.println("Attemping MQTT connection");
           
         int connected = 0;
 
@@ -253,13 +257,13 @@ void MQTT::reconnect() {
 
         //if connected, subscribe to the topic(s) we want to be notified about
         if (connected) {
-          //debugPrintln(" -- Connected");
+          Serial.println(" -- Connected");
 
           resubscribe();
           timeout = 0;
         }
         else{
-          //debugPrintln(" -- Failed");
+          Serial.println(" -- Failed");
         }
         timeout++;
        }
@@ -282,28 +286,37 @@ int MQTT::state(){
 String MQTT::constructChanelString(int channel, SubChanelType sub){
   String tmp = _deviceName;
          tmp += "/";
-  
-  if (channel == 1) { tmp += _config.channel1Id;}
-  if (channel == 2) { tmp += _config.channel2Id;}
 
-  tmp += "/";
-  switch(sub){
-    case Switch:
-      tmp += _config.channelSwitchSubId;
+  if (channel == 0) {
+    tmp += "BACKGROUND";
+  }
+  
+  if (channel == 1) {
+    switch(sub){
+    case IN:
+      tmp += _config.channel1IN;
       break;
-    case Status:
-      tmp += _config.channelStatusSubId;
-      break;
-    case Brightnes:
-      tmp += _config.channelBrightnesSubId;
-      break;
-    case StatusBrightnes:
-      tmp += _config.channelStatusBrightnesSubId;
+    case OUT:
+      tmp += _config.channel1OUT;
       break;
     default:
       //tmp += _config.channel2Id;
       break;
     }
+  }
+  if (channel == 2) {
+    switch(sub){
+    case IN:
+      tmp += _config.channel2IN;
+      break;
+    case OUT:
+      tmp += _config.channel2OUT;
+      break;
+    default:
+      //tmp += _config.channel2Id;
+      break;
+    }
+  }
 
   //Serial.println(tmp);
   return tmp;  
@@ -354,12 +367,10 @@ bool MQTT::load_config() {
     _config.tsl = json["tsl"].as<bool>();
     _config.firgerprint = json["firgerprint"].as<const char *>();
 
-    _config.channel1Id = json["channel1Id"].as<const char *>();
-    _config.channel2Id = json["channel2Id"].as<const char *>();
-    _config.channelSwitchSubId = json["channelSwitchSubId"].as<const char *>();
-    _config.channelStatusSubId = json["channelStatusSubId"].as<const char *>();
-    _config.channelBrightnesSubId = json["channelBrightnesSubId"].as<const char *>();
-    _config.channelStatusBrightnesSubId = json["channelStatusBrightnesSubId"].as<const char *>();
+    _config.channel1IN = json["channel1IN"].as<const char *>();
+    _config.channel1OUT = json["channel1OUT"].as<const char *>();
+    _config.channel2IN = json["channel2IN"].as<const char *>();
+    _config.channel2OUT = json["channel2OUT"].as<const char *>();
 
     if(!_config.tsl){
       if((_config.user[0] == '/0') && (_config.password[0] == '/0')){

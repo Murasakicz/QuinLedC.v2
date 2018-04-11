@@ -21,7 +21,7 @@
 #include <ArduinoOTA.h>
 #include <ArduinoJson.h>
 
- #define RELEASE  // Comment to enable debug output
+#define RELEASE  // Comment to enable debug output
 
 #define DBG_OUTPUT_PORT Serial
 
@@ -72,12 +72,10 @@ typedef struct {
     bool tsl;
     String firgerprint;
 
-    String channel1Id;
-    String channel2Id;
-    String channelSwitchSubId;
-    String channelStatusSubId;
-    String channelBrightnesSubId;
-    String channelStatusBrightnesSubId;
+    String channel1IN;
+    String channel1OUT;
+    String channel2IN;
+    String channel2OUT;
 
 } strMqttConfig;
 

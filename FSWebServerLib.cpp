@@ -267,12 +267,10 @@ void AsyncFSWebServer::defaultMqttConfig() {
     _mqttConfig.tsl = false;
     _mqttConfig.firgerprint = ""; 
     
-    _mqttConfig.channel1Id = "Led1";
-    _mqttConfig.channel2Id = "Led2";
-    _mqttConfig.channelSwitchSubId = "switch";
-    _mqttConfig.channelStatusSubId = "status";
-    _mqttConfig.channelBrightnesSubId = "value";
-    _mqttConfig.channelStatusBrightnesSubId = "rvalue";
+    _mqttConfig.channel1IN = "1in";
+    _mqttConfig.channel1OUT = "1out";
+    _mqttConfig.channel2IN = "2in";
+    _mqttConfig.channel2OUT = "2out";
 
     save_mqtt_config();
     DEBUGLOG(__PRETTY_FUNCTION__);
@@ -378,6 +376,10 @@ bool AsyncFSWebServer::load_mqtt_config() {
     //Serial.println(temp);
 #endif
 
+    String temp0;
+    json.prettyPrintTo(temp0);
+    Serial.println(temp0.c_str());
+
     _mqttConfig.ip = IPAddress(json["ip"][0], json["ip"][1], json["ip"][2], json["ip"][3]);
     _mqttConfig.port = json["port"].as<int>();
     _mqttConfig.user = json["user"].as<const char *>();
@@ -386,13 +388,10 @@ bool AsyncFSWebServer::load_mqtt_config() {
     _mqttConfig.tsl = json["tsl"].as<bool>();
     _mqttConfig.firgerprint = json["firgerprint"].as<const char *>();
 
-    _mqttConfig.channel1Id = json["channel1Id"].as<const char *>();
-    _mqttConfig.channel2Id = json["channel2Id"].as<const char *>();
-    _mqttConfig.channelSwitchSubId = json["channelSwitchSubId"].as<const char *>();
-    _mqttConfig.channelStatusSubId = json["channelStatusSubId"].as<const char *>();
-    _mqttConfig.channelBrightnesSubId = json["channelBrightnesSubId"].as<const char *>();
-    _mqttConfig.channelStatusBrightnesSubId = json["channelStatusBrightnesSubId"].as<const char *>();
-    
+    _mqttConfig.channel1IN = json["channel1IN"].as<const char *>();
+    _mqttConfig.channel1OUT = json["channel1OUT"].as<const char *>();    
+    _mqttConfig.channel2IN = json["channel2IN"].as<const char *>();
+    _mqttConfig.channel2OUT = json["channel2OUT"].as<const char *>();    
 
     DEBUGLOG("Data initialized.\r\n");
     DEBUGLOG("SSID: %s ", _config.ssid.c_str());
@@ -424,12 +423,10 @@ bool AsyncFSWebServer::save_mqtt_config() {
     json["tsl"] = _mqttConfig.tsl;
     json["fingerprint"] = _mqttConfig.firgerprint;
     
-    json["channel1Id"] = _mqttConfig.channel1Id;
-    json["channel2Id"] = _mqttConfig.channel2Id;
-    json["channelSwitchSubId"] = _mqttConfig.channelSwitchSubId;
-    json["channelStatusSubId"] = _mqttConfig.channelStatusSubId;
-    json["channelBrightnesSubId"] = _mqttConfig.channelBrightnesSubId;
-    json["channelStatusBrightnesSubId"] = _mqttConfig.channelStatusBrightnesSubId;
+    json["channel1IN"] = _mqttConfig.channel1IN;
+    json["channel1OUT"] = _mqttConfig.channel1OUT;
+    json["channel2IN"] = _mqttConfig.channel2IN;
+    json["channel2OUT"] = _mqttConfig.channel2OUT;
 
     File configFile = _fs->open(MQTT_CONFIG_FILE, "w");
     if (!configFile) {
@@ -989,12 +986,10 @@ void AsyncFSWebServer::send_mqtt_configuration_values_html(AsyncWebServerRequest
     values += "tsl|" + (String)(_mqttConfig.tsl ? "checked" : "") + "|chk\n";
     values += "fingerprint|" + (String)_mqttConfig.firgerprint + "|input\n";
     
-    values += "ch1_id|" + (String)_mqttConfig.channel1Id + "|input\n";
-    values += "ch2_id|" + (String)_mqttConfig.channel2Id + "|input\n";
-    values += "ch_switch_subid|" + (String)_mqttConfig.channelSwitchSubId + "|input\n";
-    values += "ch_status_subid|" + (String)_mqttConfig.channelStatusSubId + "|input\n";
-    values += "ch_brightnes_subid|" + (String)_mqttConfig.channelBrightnesSubId + "|input\n";
-    values += "ch_status_brightnes_subid|" + (String)_mqttConfig.channelStatusBrightnesSubId + "|input\n";
+    values += "ch1_in|" + (String)_mqttConfig.channel1IN + "|input\n";
+    values += "ch1_out|" + (String)_mqttConfig.channel1OUT + "|input\n";
+    values += "ch2_in|" + (String)_mqttConfig.channel2IN + "|input\n";
+    values += "ch2_out|" + (String)_mqttConfig.channel2OUT + "|input\n";
 
     request->send(200, "text/plain", values);
     values = "";
@@ -1032,17 +1027,18 @@ void AsyncFSWebServer::send_connection_state_values_html(AsyncWebServerRequest *
 void AsyncFSWebServer::send_mqtt_connection_state_values_html(AsyncWebServerRequest *request) {
 
     String state = "N/A";
+    
         
     if (mqttConnectionStatus == -4) state = "MQTT_CONNECTION_TIMEOUT - the server didn't respond within the keepalive time";
-    else if (WiFi.status() == -3) state = "MQTT_CONNECTION_LOST - the network connection was broken";
-    else if (WiFi.status() == -2) state = "MQTT_CONNECT_FAILED - the network connection failed";
-    else if (WiFi.status() == -1) state = "MQTT_DISCONNECTED - the client is disconnected cleanly";
-    else if (WiFi.status() == 0) state = "MQTT_CONNECTED - the cient is connected";
-    else if (WiFi.status() == 1) state = "MQTT_CONNECT_BAD_PROTOCOL - the server doesn't support the requested version of MQTT";
-    else if (WiFi.status() == 2) state = "MQTT_CONNECT_BAD_CLIENT_ID - the server rejected the client identifier";
-    else if (WiFi.status() == 3) state = "MQTT_CONNECT_UNAVAILABLE - the server was unable to accept the connection";
-    else if (WiFi.status() == 4) state = "MQTT_CONNECT_BAD_CREDENTIALS - the username/password were rejected";
-    else if (WiFi.status() == 5) state = "MQTT_CONNECT_UNAUTHORIZED - the client was not authorized to connect";
+    else if (mqttConnectionStatus == -3) state = "MQTT_CONNECTION_LOST - the network connection was broken";
+    else if (mqttConnectionStatus == -2) state = "MQTT_CONNECT_FAILED - the network connection failed";
+    else if (mqttConnectionStatus == -1) state = "MQTT_DISCONNECTED - the client is disconnected cleanly";
+    else if (mqttConnectionStatus == 0) state = "MQTT_CONNECTED - the client is connected";
+    else if (mqttConnectionStatus == 1) state = "MQTT_CONNECT_BAD_PROTOCOL - the server doesn't support the requested version of MQTT";
+    else if (mqttConnectionStatus == 2) state = "MQTT_CONNECT_BAD_CLIENT_ID - the server rejected the client identifier";
+    else if (mqttConnectionStatus == 3) state = "MQTT_CONNECT_UNAVAILABLE - the server was unable to accept the connection";
+    else if (mqttConnectionStatus == 4) state = "MQTT_CONNECT_BAD_CREDENTIALS - the username/password were rejected";
+    else if (mqttConnectionStatus == 5) state = "MQTT_CONNECT_UNAUTHORIZED - the client was not authorized to connect";
 
 
     String values = "";
@@ -1226,12 +1222,10 @@ void AsyncFSWebServer::send_mqtt_configuration_html(AsyncWebServerRequest *reque
             if (request->argName(i) == "tsl") { _mqttConfig.tsl = true; continue; }
             if (request->argName(i) == "Fingerprint") { _mqttConfig.firgerprint = urldecode(request->arg(i)); continue; }
             
-            if (request->argName(i) == "ch1_id") { _mqttConfig.channel1Id = urldecode(request->arg(i)); continue; }
-            if (request->argName(i) == "ch2_id") { _mqttConfig.channel2Id = urldecode(request->arg(i)); continue; }
-            if (request->argName(i) == "ch_switch_subid") { _mqttConfig.channelSwitchSubId = urldecode(request->arg(i)); continue; }
-            if (request->argName(i) == "ch_status_subid") { _mqttConfig.channelStatusSubId = urldecode(request->arg(i)); continue; }
-            if (request->argName(i) == "ch_brightnes_subid") { _mqttConfig.channelBrightnesSubId = urldecode(request->arg(i)); continue; }
-            if (request->argName(i) == "ch_status_brightnes_subid") { _mqttConfig.channelStatusBrightnesSubId = urldecode(request->arg(i)); continue; }
+            if (request->argName(i) == "ch1_in") { _mqttConfig.channel1IN = urldecode(request->arg(i)); continue; }
+            if (request->argName(i) == "ch1_out") { _mqttConfig.channel1OUT = urldecode(request->arg(i)); continue; }
+            if (request->argName(i) == "ch2_in") { _mqttConfig.channel2IN = urldecode(request->arg(i)); continue; }
+            if (request->argName(i) == "ch2_out") { _mqttConfig.channel2OUT = urldecode(request->arg(i)); continue; }
         }
         
         request->send_P(200, "text/html", Page_WaitAndReload);
